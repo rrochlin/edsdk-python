@@ -116,3 +116,5 @@ dependencies/*
 !**.gitkeep
 
 .vscode
+
+*.raw

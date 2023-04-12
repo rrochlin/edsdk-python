@@ -4,7 +4,6 @@ import uuid
 
 import edsdk
 from edsdk import (
-    CameraCommand,
     ObjectEvent,
     PropID,
     FileCreateDisposition,
@@ -33,7 +32,7 @@ def save_image(object_handle: EdsObject, save_to: str) -> int:
     return 0
 
 
-def callback_property(event: PropertyEvent, property_id: PropID, parameter: int) -> int:
+def callback_property(event: ObjectEvent, property_id: PropID, parameter: int) -> int:
     print("event: ", event)
     print("Property changed:", property_id)
     print("Parameter:", parameter)
@@ -60,7 +59,7 @@ if __name__ == "__main__":
     edsdk.OpenSession(cam)
     edsdk.SetObjectEventHandler(cam, ObjectEvent.All, callback_object)
     edsdk.SetPropertyData(cam, PropID.SaveTo, 0, SaveTo.Host)
-    print(edsdk.GetPropertyData(cam, PropID.SaveTo))
+    print(edsdk.GetPropertyData(cam, PropID.SaveTo, 0))
 
     # Sets HD Capacity to an arbitrary big value
     edsdk.SetCapacity(
@@ -68,9 +67,17 @@ if __name__ == "__main__":
     )
     print(edsdk.GetDeviceInfo(cam))
 
-    edsdk.SendCommand(cam, CameraCommand.TakePicture, 0)
+    try:
+        while True:
+            if edsdk.GetEvent() == ObjectEvent.DirItemRequestTransfer:
+                if os.name == "nt":
+                    pythoncom.PumpWaitingMessages()
+            time.sleep(0.1)
 
-    time.sleep(4)
-    if os.name == "nt":
-        pythoncom.PumpWaitingMessages()
-    edsdk.TerminateSDK()
+    except KeyboardInterrupt:
+        print('Exiting...')
+
+    finally:
+        # Clean up
+        edsdk.CloseSession(cam)
+        edsdk.TerminateSDK()
